@@ -115,6 +115,9 @@ app.get("/api/contributions/:period", async (req, res) => {
     // Sort by date
     dailyContributions.sort((a, b) => new Date(a.date) - new Date(b.date));
 
+    // Calculate additional analytics
+    const analytics = calculateAnalytics(dailyContributions);
+
     const responseData = {
       period,
       dateRange: {
@@ -130,6 +133,7 @@ app.get("/api/contributions/:period", async (req, res) => {
         activeDays: dailyContributions.filter((day) => day.count > 0).length,
       },
       contributions: dailyContributions,
+      analytics: analytics,
     };
 
     res.json(responseData);
@@ -148,6 +152,66 @@ app.get("/api/contributions/:period", async (req, res) => {
     });
   }
 });
+
+// Helper function to calculate additional analytics
+function calculateAnalytics(contributions) {
+  // Weekly activity pattern (day of week analysis)
+  const weeklyPattern = Array(7).fill(0); // [Sun, Mon, Tue, Wed, Thu, Fri, Sat]
+  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  
+  // Activity intensity distribution
+  const intensityBuckets = {
+    '0': 0,      // No activity
+    '1-3': 0,    // Light activity  
+    '4-10': 0,   // Moderate activity
+    '11-20': 0,  // High activity
+    '21+': 0     // Very high activity
+  };
+  
+  // Yearly summary
+  const yearlyData = {};
+  
+  contributions.forEach(day => {
+    const date = new Date(day.date);
+    const dayOfWeek = date.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    const year = date.getFullYear();
+    
+    // Weekly pattern
+    weeklyPattern[dayOfWeek] += day.count;
+    
+    // Activity intensity
+    if (day.count === 0) {
+      intensityBuckets['0']++;
+    } else if (day.count <= 3) {
+      intensityBuckets['1-3']++;
+    } else if (day.count <= 10) {
+      intensityBuckets['4-10']++;
+    } else if (day.count <= 20) {
+      intensityBuckets['11-20']++;
+    } else {
+      intensityBuckets['21+']++;
+    }
+    
+    // Yearly summary
+    if (!yearlyData[year]) {
+      yearlyData[year] = 0;
+    }
+    yearlyData[year] += day.count;
+  });
+  
+  // Format weekly pattern with day names
+  const weeklyPatternFormatted = weeklyPattern.map((count, index) => ({
+    day: dayNames[index],
+    dayShort: dayNames[index].substring(0, 3),
+    count: count
+  }));
+  
+  return {
+    weeklyPattern: weeklyPatternFormatted,
+    intensityDistribution: intensityBuckets,
+    yearlyData: yearlyData
+  };
+}
 
 // Helper function to get rolling period days
 function getRollingPeriodDays(period) {

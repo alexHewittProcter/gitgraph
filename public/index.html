@@ -109,59 +109,110 @@
               <div class="stat-label">Current Streak</div>
             </div>
           </div>
+        </div>
+
+        <!-- Contribution Calendar Heatmap -->
+        <div class="heatmap-container" id="heatmapContainer">
+          <div class="heatmap-header">
+            <h3>Contribution Heatmap</h3>
+            <div class="heatmap-legend">
+              <span>Less</span>
+              <div class="legend-scale">
+                <div class="legend-day level-0" data-level="0"></div>
+                <div class="legend-day level-1" data-level="1-3"></div>
+                <div class="legend-day level-2" data-level="4-6"></div>
+                <div class="legend-day level-3" data-level="7-9"></div>
+                <div class="legend-day level-4" data-level="10+"></div>
+              </div>
+              <span>More</span>
+            </div>
+          </div>
+          <div class="heatmap-grid" id="heatmapGrid"></div>
+        </div>
+
+        <!-- Chart Container -->
+        <div class="chart-container">
+          <div class="chart-header">
+            <h2>Daily Contributions</h2>
+            <div class="chart-period" id="chartPeriod"></div>
+          </div>
+          <div class="chart-wrapper">
+            <canvas id="contributionChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Rolling Average Chart Container -->
+        <div class="chart-container">
+          <div class="chart-header">
+            <h2>Rolling Average Contributions</h2>
+            <div class="chart-period" id="rollingChartPeriod"></div>
+          </div>
+          <div class="chart-wrapper">
+            <canvas id="rollingContributionChart"></canvas>
+          </div>
+          <div class="rolling-stats">
+            <div class="rolling-stat">
+              <span class="stat-label">Peak:</span>
+              <span class="stat-value" id="peakRolling">-</span>
+            </div>
+            <div class="rolling-stat">
+              <span class="stat-label">Average:</span>
+              <span class="stat-value" id="avgRolling">-</span>
+            </div>
+            <div class="rolling-stat">
+              <span class="stat-label">Account Age:</span>
+              <span class="stat-value" id="accountAge">-</span>
+            </div>
+           </div>
          </div>
 
-         <!-- Contribution Calendar Heatmap -->
-         <div class="heatmap-container" id="heatmapContainer">
-           <div class="heatmap-header">
-             <h3>Contribution Heatmap</h3>
-             <div class="heatmap-legend">
-               <span>Less</span>
-               <div class="legend-scale">
-                 <div class="legend-day level-0" data-level="0"></div>
-                 <div class="legend-day level-1" data-level="1-3"></div>
-                 <div class="legend-day level-2" data-level="4-6"></div>
-                 <div class="legend-day level-3" data-level="7-9"></div>
-                 <div class="legend-day level-4" data-level="10+"></div>
+         <!-- Analytics Section -->
+         <div class="analytics-section">
+           <h2 class="analytics-title">📊 Coding Analytics</h2>
+           
+           <div class="analytics-grid">
+             <!-- Weekly Activity Pattern -->
+             <div class="analytics-card">
+               <div class="chart-header">
+                 <h3>Weekly Activity Pattern</h3>
+                 <p>Which days do you code most?</p>
                </div>
-               <span>More</span>
+               <div class="chart-wrapper">
+                 <canvas id="weeklyPatternChart"></canvas>
+               </div>
              </div>
-           </div>
-           <div class="heatmap-grid" id="heatmapGrid"></div>
-         </div>
 
-         <!-- Chart Container -->
-         <div class="chart-container">
-           <div class="chart-header">
-             <h2>Daily Contributions</h2>
-             <div class="chart-period" id="chartPeriod"></div>
-           </div>
-           <div class="chart-wrapper">
-             <canvas id="contributionChart"></canvas>
-           </div>
-         </div>
+             <!-- Contribution Types -->
+             <div class="analytics-card">
+               <div class="chart-header">
+                 <h3>Contribution Types</h3>
+                 <p>Breakdown of your GitHub activity</p>
+               </div>
+               <div class="chart-wrapper">
+                 <canvas id="contributionTypesChart"></canvas>
+               </div>
+             </div>
 
-         <!-- Rolling Average Chart Container -->
-         <div class="chart-container">
-           <div class="chart-header">
-             <h2>Rolling Average Contributions</h2>
-             <div class="chart-period" id="rollingChartPeriod"></div>
-           </div>
-           <div class="chart-wrapper">
-             <canvas id="rollingContributionChart"></canvas>
-           </div>
-           <div class="rolling-stats">
-             <div class="rolling-stat">
-               <span class="stat-label">Peak:</span>
-               <span class="stat-value" id="peakRolling">-</span>
+             <!-- Activity Intensity -->
+             <div class="analytics-card">
+               <div class="chart-header">
+                 <h3>Activity Intensity</h3>
+                 <p>Distribution of daily contributions</p>
+               </div>
+               <div class="chart-wrapper">
+                 <canvas id="intensityChart"></canvas>
+               </div>
              </div>
-             <div class="rolling-stat">
-               <span class="stat-label">Average:</span>
-               <span class="stat-value" id="avgRolling">-</span>
-             </div>
-             <div class="rolling-stat">
-               <span class="stat-label">Account Age:</span>
-               <span class="stat-value" id="accountAge">-</span>
+
+             <!-- Yearly Summary -->
+             <div class="analytics-card">
+               <div class="chart-header">
+                 <h3>Yearly Summary</h3>
+                 <p>Your coding journey over time</p>
+               </div>
+               <div class="chart-wrapper">
+                 <canvas id="yearlyChart"></canvas>
+               </div>
              </div>
            </div>
          </div>
