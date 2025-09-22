@@ -298,6 +298,34 @@ body {
   height: 400px;
 }
 
+/* Rolling Stats */
+.rolling-stats {
+  display: flex;
+  justify-content: space-around;
+  margin-top: 20px;
+  padding: 15px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+}
+
+.rolling-stat {
+  text-align: center;
+}
+
+.rolling-stat .stat-label {
+  display: block;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9rem;
+  margin-bottom: 5px;
+}
+
+.rolling-stat .stat-value {
+  display: block;
+  color: #fff;
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+
 /* Heatmap Styles */
 .heatmap-container {
   background: rgba(255, 255, 255, 0.1);
@@ -450,4 +478,3 @@ body {
     padding: 20px;
   }
 }
-

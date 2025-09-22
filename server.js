@@ -149,6 +149,199 @@ app.get("/api/contributions/:period", async (req, res) => {
   }
 });
 
+// Helper function to get rolling period days
+function getRollingPeriodDays(period) {
+  const periods = {
+    "1week": 7,
+    "1month": 30,
+    "90day": 90,
+    "6month": 180,
+    "1year": 365,
+  };
+  return periods[period] || 30;
+}
+
+// Helper function to calculate rolling sums
+function calculateRollingSums(contributions, rollingDays) {
+  const contributionMap = new Map();
+  contributions.forEach((contrib) => {
+    contributionMap.set(contrib.date, contrib.count);
+  });
+
+  const sortedDates = contributions.map((c) => c.date).sort();
+  const rollingSums = [];
+
+  for (let i = 0; i < sortedDates.length; i++) {
+    const currentDate = new Date(sortedDates[i]);
+    let sum = 0;
+
+    // Calculate sum for the rolling window ending on currentDate
+    for (let j = 0; j < rollingDays; j++) {
+      const checkDate = new Date(currentDate);
+      checkDate.setDate(checkDate.getDate() - j);
+      const dateStr = formatDate(checkDate);
+      sum += contributionMap.get(dateStr) || 0;
+    }
+
+    rollingSums.push({
+      date: sortedDates[i],
+      rollingSum: sum,
+    });
+  }
+
+  return rollingSums;
+}
+
+// Helper function to fetch contributions in yearly chunks
+async function fetchAllContributions(accountCreated, now) {
+  const allContributions = [];
+  const currentDate = new Date(now);
+
+  while (currentDate > accountCreated) {
+    const yearEnd = new Date(currentDate);
+    const yearStart = new Date(currentDate);
+    yearStart.setFullYear(yearStart.getFullYear() - 1);
+
+    // Don't go before account creation
+    if (yearStart < accountCreated) {
+      yearStart.setTime(accountCreated.getTime());
+    }
+
+    console.log(
+      `Fetching contributions from ${formatDate(yearStart)} to ${formatDate(
+        yearEnd
+      )}`
+    );
+
+    const response = await axios.post(
+      "https://api.github.com/graphql",
+      {
+        query: CONTRIBUTIONS_QUERY,
+        variables: {
+          username: GITHUB_USERNAME,
+          from: yearStart.toISOString(),
+          to: yearEnd.toISOString(),
+        },
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${GITHUB_TOKEN}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    if (response.data.errors) {
+      throw new Error(
+        `GitHub API error: ${JSON.stringify(response.data.errors)}`
+      );
+    }
+
+    const contributionData = response.data.data.user.contributionsCollection;
+
+    // Process and add to all contributions
+    contributionData.contributionCalendar.weeks.forEach((week) => {
+      week.contributionDays.forEach((day) => {
+        allContributions.push({
+          date: day.date,
+          count: day.contributionCount,
+        });
+      });
+    });
+
+    // Move to the next year back
+    currentDate.setFullYear(currentDate.getFullYear() - 1);
+  }
+
+  // Remove duplicates and sort
+  const uniqueContributions = new Map();
+  allContributions.forEach((contrib) => {
+    uniqueContributions.set(contrib.date, contrib.count);
+  });
+
+  return Array.from(uniqueContributions.entries())
+    .map(([date, count]) => ({
+      date,
+      count,
+    }))
+    .sort((a, b) => new Date(a.date) - new Date(b.date));
+}
+
+// API endpoint to get rolling average contributions
+app.get("/api/rolling-contributions/:period", async (req, res) => {
+  try {
+    const { period } = req.params;
+    const rollingDays = getRollingPeriodDays(period);
+
+    // Get user's account creation date first
+    const userResponse = await axios.get("https://api.github.com/user", {
+      headers: {
+        Authorization: `Bearer ${GITHUB_TOKEN}`,
+        Accept: "application/vnd.github.v3+json",
+      },
+    });
+
+    const accountCreated = new Date(userResponse.data.created_at);
+    const now = new Date();
+
+    console.log(
+      `Fetching rolling contributions for ${period} (${rollingDays} days)`
+    );
+    console.log(
+      `Account created: ${formatDate(
+        accountCreated
+      )}, fetching until: ${formatDate(now)}`
+    );
+
+    // Fetch all contributions in yearly chunks
+    const allContributions = await fetchAllContributions(accountCreated, now);
+
+    console.log(`Fetched ${allContributions.length} days of contribution data`);
+
+    // Calculate rolling sums
+    const rollingSums = calculateRollingSums(allContributions, rollingDays);
+
+    // Calculate some summary statistics
+    const rollingValues = rollingSums.map((r) => r.rollingSum);
+    const maxRolling = Math.max(...rollingValues);
+    const minRolling = Math.min(...rollingValues);
+    const avgRolling =
+      rollingValues.reduce((a, b) => a + b, 0) / rollingValues.length;
+
+    const responseData = {
+      period,
+      rollingDays,
+      dateRange: {
+        from: formatDate(accountCreated),
+        to: formatDate(now),
+      },
+      summary: {
+        maxRolling: Math.round(maxRolling),
+        minRolling: Math.round(minRolling),
+        avgRolling: Math.round(avgRolling),
+        totalDays: rollingSums.length,
+        accountAge: Math.floor((now - accountCreated) / (1000 * 60 * 60 * 24)),
+      },
+      rollingSums: rollingSums,
+    };
+
+    res.json(responseData);
+  } catch (error) {
+    console.error("Error fetching rolling contributions:", error.message);
+    if (error.response) {
+      console.error(
+        "GitHub API response:",
+        error.response.status,
+        error.response.data
+      );
+    }
+    res.status(500).json({
+      error: "Failed to fetch rolling contributions",
+      message: error.message,
+    });
+  }
+});
+
 // API endpoint to get user info
 app.get("/api/user", async (req, res) => {
   try {
@@ -164,6 +357,7 @@ app.get("/api/user", async (req, res) => {
       name: response.data.name,
       avatar: response.data.avatar_url,
       profile: response.data.html_url,
+      createdAt: response.data.created_at,
     });
   } catch (error) {
     console.error("Error fetching user info:", error.message);

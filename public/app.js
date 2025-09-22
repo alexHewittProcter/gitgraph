@@ -1,8 +1,10 @@
 class GitGraph {
   constructor() {
     this.chart = null;
+    this.rollingChart = null;
     this.currentPeriod = "1month";
     this.contributionData = [];
+    this.rollingData = [];
     this.tooltip = null;
 
     this.init();
@@ -90,6 +92,9 @@ class GitGraph {
       this.updateChart(data.contributions, period);
       this.updateHeatmap(data.contributions);
       this.updatePeriodDisplay(data.dateRange, period);
+
+      // Load rolling contributions
+      this.loadRollingContributions(period);
 
       this.showContent();
     } catch (error) {
@@ -335,10 +340,193 @@ class GitGraph {
       "chartPeriod"
     ).textContent = `${periodNames[period]} (${fromDate} - ${toDate})`;
   }
+
+  async loadRollingContributions(period) {
+    try {
+      console.log(`Loading rolling contributions for ${period}`);
+      const response = await fetch(`/api/rolling-contributions/${period}`);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(
+          errorData.message || "Failed to load rolling contributions"
+        );
+      }
+
+      const data = await response.json();
+      this.rollingData = data.rollingSums;
+
+      this.updateRollingChart(data.rollingSums, period);
+      this.updateRollingStats(data.summary, period);
+      this.updateRollingPeriodDisplay(data.dateRange, period);
+
+      console.log(`Loaded ${data.rollingSums.length} rolling data points`);
+    } catch (error) {
+      console.error("Error loading rolling contributions:", error);
+      // Don't show error for rolling chart, just log it
+    }
+  }
+
+  updateRollingChart(rollingSums, period) {
+    const ctx = document
+      .getElementById("rollingContributionChart")
+      .getContext("2d");
+
+    if (this.rollingChart) {
+      this.rollingChart.destroy();
+    }
+
+    // Sample data points for performance (show every 7th day for better performance)
+    const sampledData = rollingSums.filter((_, index) => index % 7 === 0);
+
+    const labels = sampledData.map((item) => {
+      const date = new Date(item.date);
+      return date.toLocaleDateString("en-US", {
+        month: "short",
+        year: "numeric",
+      });
+    });
+
+    const data = sampledData.map((item) => item.rollingSum);
+    const maxRolling = Math.max(...data);
+
+    this.rollingChart = new Chart(ctx, {
+      type: "line",
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: `Rolling ${this.getPeriodName(period)} Contributions`,
+            data: data,
+            borderColor: "rgba(255, 193, 7, 1)",
+            backgroundColor: "rgba(255, 193, 7, 0.1)",
+            borderWidth: 2,
+            fill: true,
+            tension: 0.4,
+            pointBackgroundColor: "rgba(255, 193, 7, 1)",
+            pointBorderColor: "rgba(255, 255, 255, 1)",
+            pointBorderWidth: 1,
+            pointRadius: 2,
+            pointHoverRadius: 4,
+            pointHoverBackgroundColor: "rgba(255, 193, 7, 1)",
+            pointHoverBorderColor: "rgba(255, 255, 255, 1)",
+            pointHoverBorderWidth: 2,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false,
+          },
+          tooltip: {
+            backgroundColor: "rgba(0, 0, 0, 0.8)",
+            titleColor: "white",
+            bodyColor: "white",
+            borderColor: "rgba(255, 193, 7, 1)",
+            borderWidth: 1,
+            cornerRadius: 8,
+            displayColors: false,
+            titleFont: {
+              size: 14,
+              weight: "bold",
+            },
+            bodyFont: {
+              size: 13,
+            },
+            callbacks: {
+              title: function (context) {
+                const dataIndex = context[0].dataIndex * 7; // Account for sampling
+                const originalIndex = Math.min(
+                  dataIndex,
+                  rollingSums.length - 1
+                );
+                const date = rollingSums[originalIndex].date;
+                return new Date(date).toLocaleDateString("en-US", {
+                  weekday: "long",
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                });
+              },
+              label: function (context) {
+                const count = context.parsed.y;
+                return `${count} contributions in rolling ${period}`;
+              },
+            },
+          },
+        },
+        scales: {
+          x: {
+            display: true,
+            grid: {
+              color: "rgba(255, 255, 255, 0.1)",
+              drawBorder: false,
+            },
+            ticks: {
+              color: "rgba(255, 255, 255, 0.7)",
+              maxTicksLimit: 8,
+            },
+          },
+          y: {
+            display: true,
+            beginAtZero: true,
+            grid: {
+              color: "rgba(255, 255, 255, 0.1)",
+              drawBorder: false,
+            },
+            ticks: {
+              color: "rgba(255, 255, 255, 0.7)",
+              stepSize: Math.max(1, Math.ceil(maxRolling / 6)),
+            },
+          },
+        },
+        interaction: {
+          intersect: false,
+          mode: "index",
+        },
+        animation: {
+          duration: 1000,
+          easing: "easeInOutQuart",
+        },
+      },
+    });
+  }
+
+  updateRollingStats(summary, period) {
+    document.getElementById("peakRolling").textContent =
+      summary.maxRolling.toLocaleString();
+    document.getElementById("avgRolling").textContent =
+      summary.avgRolling.toLocaleString();
+    document.getElementById("accountAge").textContent = `${Math.floor(
+      summary.accountAge / 365
+    )} years`;
+  }
+
+  updateRollingPeriodDisplay(dateRange, period) {
+    const periodName = this.getPeriodName(period);
+    const fromDate = new Date(dateRange.from).toLocaleDateString();
+    const toDate = new Date(dateRange.to).toLocaleDateString();
+
+    document.getElementById(
+      "rollingChartPeriod"
+    ).textContent = `${periodName} rolling average since account creation (${fromDate} - ${toDate})`;
+  }
+
+  getPeriodName(period) {
+    const periodNames = {
+      "1week": "Weekly",
+      "1month": "Monthly",
+      "90day": "90-Day",
+      "6month": "6-Month",
+      "1year": "Yearly",
+    };
+    return periodNames[period] || "Monthly";
+  }
 }
 
 // Initialize the application when the DOM is loaded
 document.addEventListener("DOMContentLoaded", () => {
   new GitGraph();
 });
-

@@ -122,6 +122,31 @@
           </div>
         </div>
 
+        <!-- Rolling Average Chart Container -->
+        <div class="chart-container">
+          <div class="chart-header">
+            <h2>Rolling Average Contributions</h2>
+            <div class="chart-period" id="rollingChartPeriod"></div>
+          </div>
+          <div class="chart-wrapper">
+            <canvas id="rollingContributionChart"></canvas>
+          </div>
+          <div class="rolling-stats">
+            <div class="rolling-stat">
+              <span class="stat-label">Peak:</span>
+              <span class="stat-value" id="peakRolling">-</span>
+            </div>
+            <div class="rolling-stat">
+              <span class="stat-label">Average:</span>
+              <span class="stat-value" id="avgRolling">-</span>
+            </div>
+            <div class="rolling-stat">
+              <span class="stat-label">Account Age:</span>
+              <span class="stat-value" id="accountAge">-</span>
+            </div>
+          </div>
+        </div>
+
         <!-- Contribution Calendar Heatmap -->
         <div class="heatmap-container" id="heatmapContainer">
           <div class="heatmap-header">
@@ -146,4 +171,3 @@
     <script src="app.js"></script>
   </body>
 </html>
-
