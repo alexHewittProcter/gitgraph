@@ -1,8 +1,23 @@
-require("dotenv").config();
+// Load environment variables with override for system variables
+const dotenv = require("dotenv");
+const fs = require("fs");
+const path = require("path");
+
+// Load .env file and override system environment variables
+const envFile = path.join(__dirname, ".env");
+if (fs.existsSync(envFile)) {
+  const envConfig = dotenv.parse(fs.readFileSync(envFile));
+  for (const key in envConfig) {
+    process.env[key] = envConfig[key];
+  }
+  console.log("🔧 Loaded environment variables from .env file (overriding system vars)");
+} else {
+  dotenv.config();
+}
+
 const express = require("express");
 const axios = require("axios");
 const cors = require("cors");
-const path = require("path");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
