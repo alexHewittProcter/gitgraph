@@ -10,7 +10,9 @@ if (fs.existsSync(envFile)) {
   for (const key in envConfig) {
     process.env[key] = envConfig[key];
   }
-  console.log("🔧 Loaded environment variables from .env file (overriding system vars)");
+  console.log(
+    "🔧 Loaded environment variables from .env file (overriding system vars)"
+  );
 } else {
   dotenv.config();
 }
@@ -172,59 +174,67 @@ app.get("/api/contributions/:period", async (req, res) => {
 function calculateAnalytics(contributions) {
   // Weekly activity pattern (day of week analysis)
   const weeklyPattern = Array(7).fill(0); // [Sun, Mon, Tue, Wed, Thu, Fri, Sat]
-  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  
+  const dayNames = [
+    "Sunday",
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+  ];
+
   // Activity intensity distribution
   const intensityBuckets = {
-    '0': 0,      // No activity
-    '1-3': 0,    // Light activity  
-    '4-10': 0,   // Moderate activity
-    '11-20': 0,  // High activity
-    '21+': 0     // Very high activity
+    0: 0, // No activity
+    "1-3": 0, // Light activity
+    "4-10": 0, // Moderate activity
+    "11-20": 0, // High activity
+    "21+": 0, // Very high activity
   };
-  
+
   // Yearly summary
   const yearlyData = {};
-  
-  contributions.forEach(day => {
+
+  contributions.forEach((day) => {
     const date = new Date(day.date);
     const dayOfWeek = date.getDay(); // 0 = Sunday, 1 = Monday, etc.
     const year = date.getFullYear();
-    
+
     // Weekly pattern
     weeklyPattern[dayOfWeek] += day.count;
-    
+
     // Activity intensity
     if (day.count === 0) {
-      intensityBuckets['0']++;
+      intensityBuckets["0"]++;
     } else if (day.count <= 3) {
-      intensityBuckets['1-3']++;
+      intensityBuckets["1-3"]++;
     } else if (day.count <= 10) {
-      intensityBuckets['4-10']++;
+      intensityBuckets["4-10"]++;
     } else if (day.count <= 20) {
-      intensityBuckets['11-20']++;
+      intensityBuckets["11-20"]++;
     } else {
-      intensityBuckets['21+']++;
+      intensityBuckets["21+"]++;
     }
-    
+
     // Yearly summary
     if (!yearlyData[year]) {
       yearlyData[year] = 0;
     }
     yearlyData[year] += day.count;
   });
-  
+
   // Format weekly pattern with day names
   const weeklyPatternFormatted = weeklyPattern.map((count, index) => ({
     day: dayNames[index],
     dayShort: dayNames[index].substring(0, 3),
-    count: count
+    count: count,
   }));
-  
+
   return {
     weeklyPattern: weeklyPatternFormatted,
     intensityDistribution: intensityBuckets,
-    yearlyData: yearlyData
+    yearlyData: yearlyData,
   };
 }
 
@@ -347,80 +357,87 @@ async function fetchAllContributions(accountCreated, now) {
 }
 
 // API endpoint to get rolling average contributions
-app.get("/api/rolling-contributions/:timeRange/:rollingPeriod", async (req, res) => {
-  try {
-    const { timeRange, rollingPeriod } = req.params;
-    const rollingDays = getRollingPeriodDays(rollingPeriod);
+app.get(
+  "/api/rolling-contributions/:timeRange/:rollingPeriod",
+  async (req, res) => {
+    try {
+      const { timeRange, rollingPeriod } = req.params;
+      const rollingDays = getRollingPeriodDays(rollingPeriod);
 
-    // Get user's account creation date first
-    const userResponse = await axios.get("https://api.github.com/user", {
-      headers: {
-        Authorization: `Bearer ${GITHUB_TOKEN}`,
-        Accept: "application/vnd.github.v3+json",
-      },
-    });
+      // Get user's account creation date first
+      const userResponse = await axios.get("https://api.github.com/user", {
+        headers: {
+          Authorization: `Bearer ${GITHUB_TOKEN}`,
+          Accept: "application/vnd.github.v3+json",
+        },
+      });
 
-    const accountCreated = new Date(userResponse.data.created_at);
-    const now = new Date();
+      const accountCreated = new Date(userResponse.data.created_at);
+      const now = new Date();
 
-    console.log(
-      `Fetching rolling contributions for time range: ${timeRange}, rolling period: ${rollingPeriod} (${rollingDays} days)`
-    );
-    console.log(
-      `Account created: ${formatDate(
-        accountCreated
-      )}, fetching until: ${formatDate(now)}`
-    );
-
-    // Fetch all contributions in yearly chunks
-    const allContributions = await fetchAllContributions(accountCreated, now);
-
-    console.log(`Fetched ${allContributions.length} days of contribution data`);
-
-    // Calculate rolling sums
-    const rollingSums = calculateRollingSums(allContributions, rollingDays);
-
-    // Calculate some summary statistics
-    const rollingValues = rollingSums.map((r) => r.rollingSum);
-    const maxRolling = Math.max(...rollingValues);
-    const minRolling = Math.min(...rollingValues);
-    const avgRolling =
-      rollingValues.reduce((a, b) => a + b, 0) / rollingValues.length;
-
-    const responseData = {
-      timeRange,
-      rollingPeriod,
-      rollingDays,
-      dateRange: {
-        from: formatDate(accountCreated),
-        to: formatDate(now),
-      },
-      summary: {
-        maxRolling: Math.round(maxRolling),
-        minRolling: Math.round(minRolling),
-        avgRolling: Math.round(avgRolling),
-        totalDays: rollingSums.length,
-        accountAge: Math.floor((now - accountCreated) / (1000 * 60 * 60 * 24)),
-      },
-      rollingSums: rollingSums,
-    };
-
-    res.json(responseData);
-  } catch (error) {
-    console.error("Error fetching rolling contributions:", error.message);
-    if (error.response) {
-      console.error(
-        "GitHub API response:",
-        error.response.status,
-        error.response.data
+      console.log(
+        `Fetching rolling contributions for time range: ${timeRange}, rolling period: ${rollingPeriod} (${rollingDays} days)`
       );
+      console.log(
+        `Account created: ${formatDate(
+          accountCreated
+        )}, fetching until: ${formatDate(now)}`
+      );
+
+      // Fetch all contributions in yearly chunks
+      const allContributions = await fetchAllContributions(accountCreated, now);
+
+      console.log(
+        `Fetched ${allContributions.length} days of contribution data`
+      );
+
+      // Calculate rolling sums
+      const rollingSums = calculateRollingSums(allContributions, rollingDays);
+
+      // Calculate some summary statistics
+      const rollingValues = rollingSums.map((r) => r.rollingSum);
+      const maxRolling = Math.max(...rollingValues);
+      const minRolling = Math.min(...rollingValues);
+      const avgRolling =
+        rollingValues.reduce((a, b) => a + b, 0) / rollingValues.length;
+
+      const responseData = {
+        timeRange,
+        rollingPeriod,
+        rollingDays,
+        dateRange: {
+          from: formatDate(accountCreated),
+          to: formatDate(now),
+        },
+        summary: {
+          maxRolling: Math.round(maxRolling),
+          minRolling: Math.round(minRolling),
+          avgRolling: Math.round(avgRolling),
+          totalDays: rollingSums.length,
+          accountAge: Math.floor(
+            (now - accountCreated) / (1000 * 60 * 60 * 24)
+          ),
+        },
+        rollingSums: rollingSums,
+      };
+
+      res.json(responseData);
+    } catch (error) {
+      console.error("Error fetching rolling contributions:", error.message);
+      if (error.response) {
+        console.error(
+          "GitHub API response:",
+          error.response.status,
+          error.response.data
+        );
+      }
+      res.status(500).json({
+        error: "Failed to fetch rolling contributions",
+        message: error.message,
+      });
     }
-    res.status(500).json({
-      error: "Failed to fetch rolling contributions",
-      message: error.message,
-    });
   }
-});
+);
 
 // API endpoint to get user info
 app.get("/api/user", async (req, res) => {

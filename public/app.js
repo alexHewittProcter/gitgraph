@@ -354,10 +354,14 @@ class GitGraph {
     ).textContent = `${periodNames[period]} (${fromDate} - ${toDate})`;
   }
 
-   async loadRollingContributions(rollingPeriod) {
-     try {
-       console.log(`Loading rolling contributions for rolling period: ${rollingPeriod}, time range: ${this.currentTimeRange}`);
-       const response = await fetch(`/api/rolling-contributions/${this.currentTimeRange}/${rollingPeriod}`);
+  async loadRollingContributions(rollingPeriod) {
+    try {
+      console.log(
+        `Loading rolling contributions for rolling period: ${rollingPeriod}, time range: ${this.currentTimeRange}`
+      );
+      const response = await fetch(
+        `/api/rolling-contributions/${this.currentTimeRange}/${rollingPeriod}`
+      );
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(
@@ -368,9 +372,9 @@ class GitGraph {
       const data = await response.json();
       this.rollingData = data.rollingSums;
 
-       this.updateRollingChart(data.rollingSums, rollingPeriod);
-       this.updateRollingStats(data.summary, rollingPeriod);
-       this.updateRollingPeriodDisplay(data.dateRange, rollingPeriod);
+      this.updateRollingChart(data.rollingSums, rollingPeriod);
+      this.updateRollingStats(data.summary, rollingPeriod);
+      this.updateRollingPeriodDisplay(data.dateRange, rollingPeriod);
 
       console.log(`Loaded ${data.rollingSums.length} rolling data points`);
     } catch (error) {
@@ -379,7 +383,7 @@ class GitGraph {
     }
   }
 
-   updateRollingChart(rollingSums, rollingPeriod) {
+  updateRollingChart(rollingSums, rollingPeriod) {
     const ctx = document
       .getElementById("rollingContributionChart")
       .getContext("2d");
@@ -408,7 +412,7 @@ class GitGraph {
         labels: labels,
         datasets: [
           {
-             label: `Rolling ${this.getPeriodName(rollingPeriod)} Contributions`,
+            label: `Rolling ${this.getPeriodName(rollingPeriod)} Contributions`,
             data: data,
             borderColor: "rgba(255, 193, 7, 1)",
             backgroundColor: "rgba(255, 193, 7, 0.1)",
@@ -463,10 +467,10 @@ class GitGraph {
                   day: "numeric",
                 });
               },
-               label: function (context) {
-                 const count = context.parsed.y;
-                 return `${count} contributions in rolling ${rollingPeriod}`;
-               },
+              label: function (context) {
+                const count = context.parsed.y;
+                return `${count} contributions in rolling ${rollingPeriod}`;
+              },
             },
           },
         },
@@ -517,15 +521,15 @@ class GitGraph {
     )} years`;
   }
 
-   updateRollingPeriodDisplay(dateRange, rollingPeriod) {
-     const periodName = this.getPeriodName(rollingPeriod);
-     const fromDate = new Date(dateRange.from).toLocaleDateString();
-     const toDate = new Date(dateRange.to).toLocaleDateString();
+  updateRollingPeriodDisplay(dateRange, rollingPeriod) {
+    const periodName = this.getPeriodName(rollingPeriod);
+    const fromDate = new Date(dateRange.from).toLocaleDateString();
+    const toDate = new Date(dateRange.to).toLocaleDateString();
 
-     document.getElementById(
-       "rollingChartPeriod"
-     ).textContent = `${periodName} rolling average since account creation (${fromDate} - ${toDate})`;
-   }
+    document.getElementById(
+      "rollingChartPeriod"
+    ).textContent = `${periodName} rolling average since account creation (${fromDate} - ${toDate})`;
+  }
 
   getPeriodName(period) {
     const periodNames = {
@@ -535,289 +539,299 @@ class GitGraph {
       "6month": "6-Month",
       "1year": "Yearly",
     };
-     return periodNames[period] || "Monthly";
-   }
+    return periodNames[period] || "Monthly";
+  }
 
-   updateAnalytics(analytics, summary) {
-     this.updateWeeklyPatternChart(analytics.weeklyPattern);
-     this.updateContributionTypesChart(summary);
-     this.updateIntensityChart(analytics.intensityDistribution);
-     this.updateYearlyChart(analytics.yearlyData);
-   }
+  updateAnalytics(analytics, summary) {
+    this.updateWeeklyPatternChart(analytics.weeklyPattern);
+    this.updateContributionTypesChart(summary);
+    this.updateIntensityChart(analytics.intensityDistribution);
+    this.updateYearlyChart(analytics.yearlyData);
+  }
 
-   updateWeeklyPatternChart(weeklyPattern) {
-     const ctx = document.getElementById("weeklyPatternChart").getContext("2d");
-     
-     if (this.weeklyChart) {
-       this.weeklyChart.destroy();
-     }
+  updateWeeklyPatternChart(weeklyPattern) {
+    const ctx = document.getElementById("weeklyPatternChart").getContext("2d");
 
-     const labels = weeklyPattern.map(d => d.dayShort);
-     const data = weeklyPattern.map(d => d.count);
-     const colors = [
-       'rgba(255, 99, 132, 0.8)',   // Sunday - Red
-       'rgba(54, 162, 235, 0.8)',   // Monday - Blue
-       'rgba(255, 206, 86, 0.8)',   // Tuesday - Yellow
-       'rgba(75, 192, 192, 0.8)',   // Wednesday - Green
-       'rgba(153, 102, 255, 0.8)',  // Thursday - Purple
-       'rgba(255, 159, 64, 0.8)',   // Friday - Orange
-       'rgba(199, 199, 199, 0.8)'   // Saturday - Gray
-     ];
+    if (this.weeklyChart) {
+      this.weeklyChart.destroy();
+    }
 
-     this.weeklyChart = new Chart(ctx, {
-       type: 'bar',
-       data: {
-         labels: labels,
-         datasets: [{
-           label: 'Contributions',
-           data: data,
-           backgroundColor: colors,
-           borderColor: colors.map(color => color.replace('0.8', '1')),
-           borderWidth: 2,
-           borderRadius: 8,
-         }]
-       },
-       options: {
-         responsive: true,
-         maintainAspectRatio: false,
-         plugins: {
-           legend: {
-             display: false
-           },
-           tooltip: {
-             backgroundColor: 'rgba(0, 0, 0, 0.8)',
-             titleColor: 'white',
-             bodyColor: 'white',
-             callbacks: {
-               label: function(context) {
-                 const dayName = weeklyPattern[context.dataIndex].day;
-                 return `${dayName}: ${context.parsed.y} contributions`;
-               }
-             }
-           }
-         },
-         scales: {
-           x: {
-             grid: {
-               color: 'rgba(255, 255, 255, 0.1)',
-               drawBorder: false
-             },
-             ticks: {
-               color: 'rgba(255, 255, 255, 0.7)'
-             }
-           },
-           y: {
-             beginAtZero: true,
-             grid: {
-               color: 'rgba(255, 255, 255, 0.1)',
-               drawBorder: false
-             },
-             ticks: {
-               color: 'rgba(255, 255, 255, 0.7)'
-             }
-           }
-         }
-       }
-     });
-   }
+    const labels = weeklyPattern.map((d) => d.dayShort);
+    const data = weeklyPattern.map((d) => d.count);
+    const colors = [
+      "rgba(255, 99, 132, 0.8)", // Sunday - Red
+      "rgba(54, 162, 235, 0.8)", // Monday - Blue
+      "rgba(255, 206, 86, 0.8)", // Tuesday - Yellow
+      "rgba(75, 192, 192, 0.8)", // Wednesday - Green
+      "rgba(153, 102, 255, 0.8)", // Thursday - Purple
+      "rgba(255, 159, 64, 0.8)", // Friday - Orange
+      "rgba(199, 199, 199, 0.8)", // Saturday - Gray
+    ];
 
-   updateContributionTypesChart(summary) {
-     const ctx = document.getElementById("contributionTypesChart").getContext("2d");
-     
-     if (this.typesChart) {
-       this.typesChart.destroy();
-     }
+    this.weeklyChart = new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: "Contributions",
+            data: data,
+            backgroundColor: colors,
+            borderColor: colors.map((color) => color.replace("0.8", "1")),
+            borderWidth: 2,
+            borderRadius: 8,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false,
+          },
+          tooltip: {
+            backgroundColor: "rgba(0, 0, 0, 0.8)",
+            titleColor: "white",
+            bodyColor: "white",
+            callbacks: {
+              label: function (context) {
+                const dayName = weeklyPattern[context.dataIndex].day;
+                return `${dayName}: ${context.parsed.y} contributions`;
+              },
+            },
+          },
+        },
+        scales: {
+          x: {
+            grid: {
+              color: "rgba(255, 255, 255, 0.1)",
+              drawBorder: false,
+            },
+            ticks: {
+              color: "rgba(255, 255, 255, 0.7)",
+            },
+          },
+          y: {
+            beginAtZero: true,
+            grid: {
+              color: "rgba(255, 255, 255, 0.1)",
+              drawBorder: false,
+            },
+            ticks: {
+              color: "rgba(255, 255, 255, 0.7)",
+            },
+          },
+        },
+      },
+    });
+  }
 
-     const data = [
-       summary.totalCommits,
-       summary.totalPRs,
-       summary.totalIssues,
-       summary.totalReviews
-     ];
-     
-     const labels = ['Commits', 'Pull Requests', 'Issues', 'Reviews'];
-     const colors = [
-       'rgba(78, 205, 196, 0.8)',
-       'rgba(255, 107, 107, 0.8)',
-       'rgba(255, 193, 7, 0.8)',
-       'rgba(108, 92, 231, 0.8)'
-     ];
+  updateContributionTypesChart(summary) {
+    const ctx = document
+      .getElementById("contributionTypesChart")
+      .getContext("2d");
 
-     this.typesChart = new Chart(ctx, {
-       type: 'doughnut',
-       data: {
-         labels: labels,
-         datasets: [{
-           data: data,
-           backgroundColor: colors,
-           borderColor: colors.map(color => color.replace('0.8', '1')),
-           borderWidth: 2
-         }]
-       },
-       options: {
-         responsive: true,
-         maintainAspectRatio: false,
-         plugins: {
-           legend: {
-             position: 'bottom',
-             labels: {
-               color: 'rgba(255, 255, 255, 0.8)',
-               padding: 20
-             }
-           },
-           tooltip: {
-             backgroundColor: 'rgba(0, 0, 0, 0.8)',
-             titleColor: 'white',
-             bodyColor: 'white'
-           }
-         }
-       }
-     });
-   }
+    if (this.typesChart) {
+      this.typesChart.destroy();
+    }
 
-   updateIntensityChart(intensityDistribution) {
-     const ctx = document.getElementById("intensityChart").getContext("2d");
-     
-     if (this.intensityChart) {
-       this.intensityChart.destroy();
-     }
+    const data = [
+      summary.totalCommits,
+      summary.totalPRs,
+      summary.totalIssues,
+      summary.totalReviews,
+    ];
 
-     const labels = Object.keys(intensityDistribution);
-     const data = Object.values(intensityDistribution);
+    const labels = ["Commits", "Pull Requests", "Issues", "Reviews"];
+    const colors = [
+      "rgba(78, 205, 196, 0.8)",
+      "rgba(255, 107, 107, 0.8)",
+      "rgba(255, 193, 7, 0.8)",
+      "rgba(108, 92, 231, 0.8)",
+    ];
 
-     this.intensityChart = new Chart(ctx, {
-       type: 'bar',
-       data: {
-         labels: labels,
-         datasets: [{
-           label: 'Days',
-           data: data,
-           backgroundColor: 'rgba(156, 39, 176, 0.8)',
-           borderColor: 'rgba(156, 39, 176, 1)',
-           borderWidth: 2,
-           borderRadius: 8,
-         }]
-       },
-       options: {
-         responsive: true,
-         maintainAspectRatio: false,
-         plugins: {
-           legend: {
-             display: false
-           },
-           tooltip: {
-             backgroundColor: 'rgba(0, 0, 0, 0.8)',
-             titleColor: 'white',
-             bodyColor: 'white',
-             callbacks: {
-               title: function(context) {
-                 return `${context[0].label} contributions per day`;
-               },
-               label: function(context) {
-                 return `${context.parsed.y} days`;
-               }
-             }
-           }
-         },
-         scales: {
-           x: {
-             grid: {
-               color: 'rgba(255, 255, 255, 0.1)',
-               drawBorder: false
-             },
-             ticks: {
-               color: 'rgba(255, 255, 255, 0.7)'
-             }
-           },
-           y: {
-             beginAtZero: true,
-             grid: {
-               color: 'rgba(255, 255, 255, 0.1)',
-               drawBorder: false
-             },
-             ticks: {
-               color: 'rgba(255, 255, 255, 0.7)'
-             }
-           }
-         }
-       }
-     });
-   }
+    this.typesChart = new Chart(ctx, {
+      type: "doughnut",
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            data: data,
+            backgroundColor: colors,
+            borderColor: colors.map((color) => color.replace("0.8", "1")),
+            borderWidth: 2,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: "bottom",
+            labels: {
+              color: "rgba(255, 255, 255, 0.8)",
+              padding: 20,
+            },
+          },
+          tooltip: {
+            backgroundColor: "rgba(0, 0, 0, 0.8)",
+            titleColor: "white",
+            bodyColor: "white",
+          },
+        },
+      },
+    });
+  }
 
-   updateYearlyChart(yearlyData) {
-     const ctx = document.getElementById("yearlyChart").getContext("2d");
-     
-     if (this.yearlyChart) {
-       this.yearlyChart.destroy();
-     }
+  updateIntensityChart(intensityDistribution) {
+    const ctx = document.getElementById("intensityChart").getContext("2d");
 
-     const years = Object.keys(yearlyData).sort();
-     const data = years.map(year => yearlyData[year]);
+    if (this.intensityChart) {
+      this.intensityChart.destroy();
+    }
 
-     this.yearlyChart = new Chart(ctx, {
-       type: 'line',
-       data: {
-         labels: years,
-         datasets: [{
-           label: 'Contributions',
-           data: data,
-           borderColor: 'rgba(0, 123, 255, 1)',
-           backgroundColor: 'rgba(0, 123, 255, 0.1)',
-           borderWidth: 3,
-           fill: true,
-           tension: 0.4,
-           pointBackgroundColor: 'rgba(0, 123, 255, 1)',
-           pointBorderColor: 'rgba(255, 255, 255, 1)',
-           pointBorderWidth: 2,
-           pointRadius: 6,
-           pointHoverRadius: 8
-         }]
-       },
-       options: {
-         responsive: true,
-         maintainAspectRatio: false,
-         plugins: {
-           legend: {
-             display: false
-           },
-           tooltip: {
-             backgroundColor: 'rgba(0, 0, 0, 0.8)',
-             titleColor: 'white',
-             bodyColor: 'white',
-             callbacks: {
-               label: function(context) {
-                 return `${context.parsed.y} contributions in ${context.label}`;
-               }
-             }
-           }
-         },
-         scales: {
-           x: {
-             grid: {
-               color: 'rgba(255, 255, 255, 0.1)',
-               drawBorder: false
-             },
-             ticks: {
-               color: 'rgba(255, 255, 255, 0.7)'
-             }
-           },
-           y: {
-             beginAtZero: true,
-             grid: {
-               color: 'rgba(255, 255, 255, 0.1)',
-               drawBorder: false
-             },
-             ticks: {
-               color: 'rgba(255, 255, 255, 0.7)'
-             }
-           }
-         }
-       }
-     });
-   }
- }
+    const labels = Object.keys(intensityDistribution);
+    const data = Object.values(intensityDistribution);
 
- // Initialize the application when the DOM is loaded
- document.addEventListener("DOMContentLoaded", () => {
-   new GitGraph();
- });
+    this.intensityChart = new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: "Days",
+            data: data,
+            backgroundColor: "rgba(156, 39, 176, 0.8)",
+            borderColor: "rgba(156, 39, 176, 1)",
+            borderWidth: 2,
+            borderRadius: 8,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false,
+          },
+          tooltip: {
+            backgroundColor: "rgba(0, 0, 0, 0.8)",
+            titleColor: "white",
+            bodyColor: "white",
+            callbacks: {
+              title: function (context) {
+                return `${context[0].label} contributions per day`;
+              },
+              label: function (context) {
+                return `${context.parsed.y} days`;
+              },
+            },
+          },
+        },
+        scales: {
+          x: {
+            grid: {
+              color: "rgba(255, 255, 255, 0.1)",
+              drawBorder: false,
+            },
+            ticks: {
+              color: "rgba(255, 255, 255, 0.7)",
+            },
+          },
+          y: {
+            beginAtZero: true,
+            grid: {
+              color: "rgba(255, 255, 255, 0.1)",
+              drawBorder: false,
+            },
+            ticks: {
+              color: "rgba(255, 255, 255, 0.7)",
+            },
+          },
+        },
+      },
+    });
+  }
+
+  updateYearlyChart(yearlyData) {
+    const ctx = document.getElementById("yearlyChart").getContext("2d");
+
+    if (this.yearlyChart) {
+      this.yearlyChart.destroy();
+    }
+
+    const years = Object.keys(yearlyData).sort();
+    const data = years.map((year) => yearlyData[year]);
+
+    this.yearlyChart = new Chart(ctx, {
+      type: "line",
+      data: {
+        labels: years,
+        datasets: [
+          {
+            label: "Contributions",
+            data: data,
+            borderColor: "rgba(0, 123, 255, 1)",
+            backgroundColor: "rgba(0, 123, 255, 0.1)",
+            borderWidth: 3,
+            fill: true,
+            tension: 0.4,
+            pointBackgroundColor: "rgba(0, 123, 255, 1)",
+            pointBorderColor: "rgba(255, 255, 255, 1)",
+            pointBorderWidth: 2,
+            pointRadius: 6,
+            pointHoverRadius: 8,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false,
+          },
+          tooltip: {
+            backgroundColor: "rgba(0, 0, 0, 0.8)",
+            titleColor: "white",
+            bodyColor: "white",
+            callbacks: {
+              label: function (context) {
+                return `${context.parsed.y} contributions in ${context.label}`;
+              },
+            },
+          },
+        },
+        scales: {
+          x: {
+            grid: {
+              color: "rgba(255, 255, 255, 0.1)",
+              drawBorder: false,
+            },
+            ticks: {
+              color: "rgba(255, 255, 255, 0.7)",
+            },
+          },
+          y: {
+            beginAtZero: true,
+            grid: {
+              color: "rgba(255, 255, 255, 0.1)",
+              drawBorder: false,
+            },
+            ticks: {
+              color: "rgba(255, 255, 255, 0.7)",
+            },
+          },
+        },
+      },
+    });
+  }
+}
+
+// Initialize the application when the DOM is loaded
+document.addEventListener("DOMContentLoaded", () => {
+  new GitGraph();
+});
