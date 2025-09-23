@@ -2,7 +2,8 @@ class GitGraph {
   constructor() {
     this.chart = null;
     this.rollingChart = null;
-    this.currentPeriod = "1month";
+    this.currentTimeRange = "1month";
+    this.currentRollingPeriod = "1month";
     this.contributionData = [];
     this.rollingData = [];
     this.tooltip = null;
@@ -14,7 +15,7 @@ class GitGraph {
     this.createTooltip();
     this.setupEventListeners();
     this.loadUserInfo();
-    this.loadContributions(this.currentPeriod);
+    this.loadContributions(this.currentTimeRange);
   }
 
   createTooltip() {
@@ -24,16 +25,23 @@ class GitGraph {
   }
 
   setupEventListeners() {
-    const periodSelect = document.getElementById("periodSelect");
+    const timeRangeSelect = document.getElementById("timeRangeSelect");
+    const rollingPeriodSelect = document.getElementById("rollingPeriodSelect");
     const refreshBtn = document.getElementById("refreshBtn");
 
-    periodSelect.addEventListener("change", (e) => {
-      this.currentPeriod = e.target.value;
-      this.loadContributions(this.currentPeriod);
+    timeRangeSelect.addEventListener("change", (e) => {
+      this.currentTimeRange = e.target.value;
+      this.loadContributions(this.currentTimeRange);
+    });
+
+    rollingPeriodSelect.addEventListener("change", (e) => {
+      this.currentRollingPeriod = e.target.value;
+      this.loadRollingContributions(this.currentRollingPeriod);
     });
 
     refreshBtn.addEventListener("click", () => {
-      this.loadContributions(this.currentPeriod);
+      this.loadContributions(this.currentTimeRange);
+      this.loadRollingContributions(this.currentRollingPeriod);
     });
   }
 
@@ -99,7 +107,7 @@ class GitGraph {
       }
 
       // Load rolling contributions
-      this.loadRollingContributions(period);
+      this.loadRollingContributions(this.currentRollingPeriod);
 
       this.showContent();
     } catch (error) {
@@ -346,10 +354,10 @@ class GitGraph {
     ).textContent = `${periodNames[period]} (${fromDate} - ${toDate})`;
   }
 
-  async loadRollingContributions(period) {
-    try {
-      console.log(`Loading rolling contributions for ${period}`);
-      const response = await fetch(`/api/rolling-contributions/${period}`);
+   async loadRollingContributions(rollingPeriod) {
+     try {
+       console.log(`Loading rolling contributions for rolling period: ${rollingPeriod}, time range: ${this.currentTimeRange}`);
+       const response = await fetch(`/api/rolling-contributions/${this.currentTimeRange}/${rollingPeriod}`);
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(
@@ -360,9 +368,9 @@ class GitGraph {
       const data = await response.json();
       this.rollingData = data.rollingSums;
 
-      this.updateRollingChart(data.rollingSums, period);
-      this.updateRollingStats(data.summary, period);
-      this.updateRollingPeriodDisplay(data.dateRange, period);
+       this.updateRollingChart(data.rollingSums, rollingPeriod);
+       this.updateRollingStats(data.summary, rollingPeriod);
+       this.updateRollingPeriodDisplay(data.dateRange, rollingPeriod);
 
       console.log(`Loaded ${data.rollingSums.length} rolling data points`);
     } catch (error) {
@@ -371,7 +379,7 @@ class GitGraph {
     }
   }
 
-  updateRollingChart(rollingSums, period) {
+   updateRollingChart(rollingSums, rollingPeriod) {
     const ctx = document
       .getElementById("rollingContributionChart")
       .getContext("2d");
@@ -400,7 +408,7 @@ class GitGraph {
         labels: labels,
         datasets: [
           {
-            label: `Rolling ${this.getPeriodName(period)} Contributions`,
+             label: `Rolling ${this.getPeriodName(rollingPeriod)} Contributions`,
             data: data,
             borderColor: "rgba(255, 193, 7, 1)",
             backgroundColor: "rgba(255, 193, 7, 0.1)",
@@ -455,10 +463,10 @@ class GitGraph {
                   day: "numeric",
                 });
               },
-              label: function (context) {
-                const count = context.parsed.y;
-                return `${count} contributions in rolling ${period}`;
-              },
+               label: function (context) {
+                 const count = context.parsed.y;
+                 return `${count} contributions in rolling ${rollingPeriod}`;
+               },
             },
           },
         },
@@ -509,15 +517,15 @@ class GitGraph {
     )} years`;
   }
 
-  updateRollingPeriodDisplay(dateRange, period) {
-    const periodName = this.getPeriodName(period);
-    const fromDate = new Date(dateRange.from).toLocaleDateString();
-    const toDate = new Date(dateRange.to).toLocaleDateString();
+   updateRollingPeriodDisplay(dateRange, rollingPeriod) {
+     const periodName = this.getPeriodName(rollingPeriod);
+     const fromDate = new Date(dateRange.from).toLocaleDateString();
+     const toDate = new Date(dateRange.to).toLocaleDateString();
 
-    document.getElementById(
-      "rollingChartPeriod"
-    ).textContent = `${periodName} rolling average since account creation (${fromDate} - ${toDate})`;
-  }
+     document.getElementById(
+       "rollingChartPeriod"
+     ).textContent = `${periodName} rolling average since account creation (${fromDate} - ${toDate})`;
+   }
 
   getPeriodName(period) {
     const periodNames = {

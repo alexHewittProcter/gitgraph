@@ -156,28 +156,55 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-.period-selector label {
-  color: #fff;
-  font-weight: 600;
-  margin-right: 10px;
-  font-size: 1rem;
-}
+ .selectors-group {
+   display: flex;
+   gap: 30px;
+   align-items: center;
+   flex-wrap: wrap;
+ }
 
-.period-selector select {
-  padding: 10px 15px;
-  border-radius: 10px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
-  font-size: 1rem;
-  cursor: pointer;
-  backdrop-filter: blur(10px);
-}
+ .time-range-selector,
+ .rolling-period-selector {
+   display: flex;
+   align-items: center;
+   gap: 10px;
+ }
 
-.period-selector select option {
-  background: #4a4a4a;
-  color: #fff;
-}
+ .time-range-selector label,
+ .rolling-period-selector label {
+   color: #fff;
+   font-weight: 600;
+   font-size: 1rem;
+   white-space: nowrap;
+ }
+
+ .time-range-selector select,
+ .rolling-period-selector select {
+   padding: 10px 15px;
+   border-radius: 10px;
+   border: 2px solid rgba(255, 255, 255, 0.3);
+   background: rgba(255, 255, 255, 0.1);
+   color: #fff;
+   font-size: 1rem;
+   cursor: pointer;
+   backdrop-filter: blur(10px);
+   min-width: 120px;
+ }
+
+ .time-range-selector select option,
+ .rolling-period-selector select option {
+   background: #4a4a4a;
+   color: #fff;
+ }
+
+ /* Highlight different purposes */
+ .time-range-selector select {
+   border-color: rgba(78, 205, 196, 0.6);
+ }
+
+ .rolling-period-selector select {
+   border-color: rgba(255, 193, 7, 0.6);
+ }
 
 #refreshBtn {
   background: linear-gradient(45deg, #4ecdc4, #44a08d);
@@ -451,10 +478,21 @@ body {
     text-align: center;
   }
 
-  .controls {
-    flex-direction: column;
-    gap: 20px;
-  }
+   .controls {
+     flex-direction: column;
+     gap: 20px;
+   }
+
+   .selectors-group {
+     flex-direction: column;
+     gap: 15px;
+   }
+
+   .time-range-selector,
+   .rolling-period-selector {
+     justify-content: space-between;
+     width: 100%;
+   }
 
   .stats-grid {
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));

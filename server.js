@@ -347,10 +347,10 @@ async function fetchAllContributions(accountCreated, now) {
 }
 
 // API endpoint to get rolling average contributions
-app.get("/api/rolling-contributions/:period", async (req, res) => {
+app.get("/api/rolling-contributions/:timeRange/:rollingPeriod", async (req, res) => {
   try {
-    const { period } = req.params;
-    const rollingDays = getRollingPeriodDays(period);
+    const { timeRange, rollingPeriod } = req.params;
+    const rollingDays = getRollingPeriodDays(rollingPeriod);
 
     // Get user's account creation date first
     const userResponse = await axios.get("https://api.github.com/user", {
@@ -364,7 +364,7 @@ app.get("/api/rolling-contributions/:period", async (req, res) => {
     const now = new Date();
 
     console.log(
-      `Fetching rolling contributions for ${period} (${rollingDays} days)`
+      `Fetching rolling contributions for time range: ${timeRange}, rolling period: ${rollingPeriod} (${rollingDays} days)`
     );
     console.log(
       `Account created: ${formatDate(
@@ -388,7 +388,8 @@ app.get("/api/rolling-contributions/:period", async (req, res) => {
       rollingValues.reduce((a, b) => a + b, 0) / rollingValues.length;
 
     const responseData = {
-      period,
+      timeRange,
+      rollingPeriod,
       rollingDays,
       dateRange: {
         from: formatDate(accountCreated),
