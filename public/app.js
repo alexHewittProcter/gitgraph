@@ -2,10 +2,13 @@ class GitGraph {
   constructor() {
     this.chart = null;
     this.rollingChart = null;
+    this.comparisonChart = null;
+    this.weeklyPatternComparisonChart = null;
     this.currentTimeRange = "1month";
     this.currentRollingPeriod = "1month";
     this.contributionData = [];
     this.rollingData = [];
+    this.comparisonData = null;
     this.tooltip = null;
 
     this.init();
@@ -108,6 +111,9 @@ class GitGraph {
 
       // Load rolling contributions
       this.loadRollingContributions(this.currentRollingPeriod);
+
+      // Load comparison data
+      this.loadComparisonData(period);
 
       this.showContent();
     } catch (error) {
@@ -801,6 +807,311 @@ class GitGraph {
             callbacks: {
               label: function (context) {
                 return `${context.parsed.y} contributions in ${context.label}`;
+              },
+            },
+          },
+        },
+        scales: {
+          x: {
+            grid: {
+              color: "rgba(255, 255, 255, 0.1)",
+              drawBorder: false,
+            },
+            ticks: {
+              color: "rgba(255, 255, 255, 0.7)",
+            },
+          },
+          y: {
+            beginAtZero: true,
+            grid: {
+              color: "rgba(255, 255, 255, 0.1)",
+              drawBorder: false,
+            },
+            ticks: {
+              color: "rgba(255, 255, 255, 0.7)",
+            },
+          },
+        },
+      },
+    });
+  }
+
+  async loadComparisonData(period) {
+    try {
+      console.log(`Loading comparison data for period: ${period}`);
+      const response = await fetch(`/api/contributions/compare/${period}`);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to load comparison data");
+      }
+
+      const data = await response.json();
+      this.comparisonData = data;
+
+      this.updateComparisonStats(data);
+      this.updateComparisonChart(data);
+      this.updateWeeklyPatternComparison(data);
+
+      console.log("Comparison data loaded successfully");
+    } catch (error) {
+      console.error("Error loading comparison data:", error);
+      // Don't show error for comparison data, just log it
+    }
+  }
+
+  updateComparisonStats(data) {
+    // Update current period stats
+    document.getElementById("currentTotalContributions").textContent =
+      data.current.summary.totalContributions.toLocaleString();
+    document.getElementById("currentActiveDays").textContent =
+      data.current.summary.activeDays.toLocaleString();
+    document.getElementById("currentCommits").textContent =
+      data.current.summary.totalCommits.toLocaleString();
+    document.getElementById("currentPRs").textContent =
+      data.current.summary.totalPRs.toLocaleString();
+
+    // Update previous period stats
+    document.getElementById("previousTotalContributions").textContent =
+      data.previous.summary.totalContributions.toLocaleString();
+    document.getElementById("previousActiveDays").textContent =
+      data.previous.summary.activeDays.toLocaleString();
+    document.getElementById("previousCommits").textContent =
+      data.previous.summary.totalCommits.toLocaleString();
+    document.getElementById("previousPRs").textContent =
+      data.previous.summary.totalPRs.toLocaleString();
+
+    // Update change indicators
+    this.updateChangeIndicator(
+      "totalContributionsChange",
+      data.changes.totalContributions
+    );
+    this.updateChangeIndicator("activeDaysChange", data.changes.activeDays);
+    this.updateChangeIndicator("commitsChange", data.changes.totalCommits);
+    this.updateChangeIndicator("prsChange", data.changes.totalPRs);
+  }
+
+  updateChangeIndicator(elementId, changePercent) {
+    const element = document.getElementById(elementId);
+    const isPositive = changePercent >= 0;
+    const icon = isPositive ? "↗" : "↘";
+    const sign = isPositive ? "+" : "";
+
+    element.textContent = `${icon} ${sign}${changePercent.toFixed(1)}%`;
+    element.className = `change-indicator ${
+      isPositive ? "positive" : "negative"
+    }`;
+  }
+
+  updateComparisonChart(data) {
+    const ctx = document.getElementById("comparisonChart").getContext("2d");
+
+    if (this.comparisonChart) {
+      this.comparisonChart.destroy();
+    }
+
+    // Create aligned daily data for comparison
+    const maxLength = Math.max(
+      data.current.contributions.length,
+      data.previous.contributions.length
+    );
+    const labels = [];
+    const currentData = [];
+    const previousData = [];
+
+    for (let i = 0; i < maxLength; i++) {
+      if (i < data.current.contributions.length) {
+        const currentDay = data.current.contributions[i];
+        labels.push(
+          new Date(currentDay.date).toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+          })
+        );
+        currentData.push(currentDay.count);
+      } else {
+        currentData.push(0);
+      }
+
+      if (i < data.previous.contributions.length) {
+        previousData.push(data.previous.contributions[i].count);
+      } else {
+        previousData.push(0);
+      }
+    }
+
+    this.comparisonChart = new Chart(ctx, {
+      type: "line",
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: "Current Period",
+            data: currentData,
+            borderColor: "rgba(78, 205, 196, 1)",
+            backgroundColor: "rgba(78, 205, 196, 0.1)",
+            borderWidth: 3,
+            fill: false,
+            tension: 0.4,
+            pointBackgroundColor: "rgba(78, 205, 196, 1)",
+            pointBorderColor: "rgba(255, 255, 255, 1)",
+            pointBorderWidth: 2,
+            pointRadius: 4,
+            pointHoverRadius: 6,
+          },
+          {
+            label: "Previous Period",
+            data: previousData,
+            borderColor: "rgba(255, 193, 7, 1)",
+            backgroundColor: "rgba(255, 193, 7, 0.1)",
+            borderWidth: 2,
+            fill: false,
+            tension: 0.4,
+            pointBackgroundColor: "rgba(255, 193, 7, 1)",
+            pointBorderColor: "rgba(255, 255, 255, 1)",
+            pointBorderWidth: 2,
+            pointRadius: 3,
+            pointHoverRadius: 5,
+            borderDash: [5, 5],
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: true,
+            position: "top",
+            labels: {
+              color: "rgba(255, 255, 255, 0.8)",
+              usePointStyle: true,
+              padding: 20,
+            },
+          },
+          tooltip: {
+            backgroundColor: "rgba(0, 0, 0, 0.8)",
+            titleColor: "white",
+            bodyColor: "white",
+            borderColor: "rgba(78, 205, 196, 1)",
+            borderWidth: 1,
+            cornerRadius: 8,
+            displayColors: true,
+            titleFont: {
+              size: 14,
+              weight: "bold",
+            },
+            bodyFont: {
+              size: 13,
+            },
+          },
+        },
+        scales: {
+          x: {
+            display: true,
+            grid: {
+              color: "rgba(255, 255, 255, 0.1)",
+              drawBorder: false,
+            },
+            ticks: {
+              color: "rgba(255, 255, 255, 0.7)",
+              maxTicksLimit: 10,
+            },
+          },
+          y: {
+            display: true,
+            beginAtZero: true,
+            grid: {
+              color: "rgba(255, 255, 255, 0.1)",
+              drawBorder: false,
+            },
+            ticks: {
+              color: "rgba(255, 255, 255, 0.7)",
+            },
+          },
+        },
+        interaction: {
+          intersect: false,
+          mode: "index",
+        },
+        animation: {
+          duration: 1000,
+          easing: "easeInOutQuart",
+        },
+      },
+    });
+
+    // Update period display
+    const currentPeriod = `${data.dateRanges.current.from} to ${data.dateRanges.current.to}`;
+    const previousPeriod = `${data.dateRanges.previous.from} to ${data.dateRanges.previous.to}`;
+    document.getElementById(
+      "comparisonChartPeriod"
+    ).textContent = `Current: ${currentPeriod} | Previous: ${previousPeriod}`;
+  }
+
+  updateWeeklyPatternComparison(data) {
+    const ctx = document
+      .getElementById("weeklyPatternComparisonChart")
+      .getContext("2d");
+
+    if (this.weeklyPatternComparisonChart) {
+      this.weeklyPatternComparisonChart.destroy();
+    }
+
+    const currentWeeklyPattern = data.current.analytics.weeklyPattern;
+    const previousWeeklyPattern = data.previous.analytics.weeklyPattern;
+
+    const labels = currentWeeklyPattern.map((d) => d.dayShort);
+    const currentData = currentWeeklyPattern.map((d) => d.count);
+    const previousData = previousWeeklyPattern.map((d) => d.count);
+
+    this.weeklyPatternComparisonChart = new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: "Current Period",
+            data: currentData,
+            backgroundColor: "rgba(78, 205, 196, 0.8)",
+            borderColor: "rgba(78, 205, 196, 1)",
+            borderWidth: 2,
+            borderRadius: 6,
+          },
+          {
+            label: "Previous Period",
+            data: previousData,
+            backgroundColor: "rgba(255, 193, 7, 0.6)",
+            borderColor: "rgba(255, 193, 7, 1)",
+            borderWidth: 2,
+            borderRadius: 6,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: true,
+            position: "top",
+            labels: {
+              color: "rgba(255, 255, 255, 0.8)",
+              padding: 20,
+            },
+          },
+          tooltip: {
+            backgroundColor: "rgba(0, 0, 0, 0.8)",
+            titleColor: "white",
+            bodyColor: "white",
+            callbacks: {
+              title: function (context) {
+                const dayIndex = context[0].dataIndex;
+                return currentWeeklyPattern[dayIndex].day;
+              },
+              label: function (context) {
+                const period =
+                  context.datasetIndex === 0 ? "Current" : "Previous";
+                return `${period}: ${context.parsed.y} contributions`;
               },
             },
           },

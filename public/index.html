@@ -228,6 +228,112 @@
             </div>
           </div>
         </div>
+
+        <!-- Comparison Section -->
+        <div class="comparison-section">
+          <h2 class="comparison-title">📈 Period Comparison</h2>
+          <p class="comparison-subtitle">
+            Compare your current period with the previous period
+          </p>
+
+          <!-- Comparison Stats Cards -->
+          <div class="comparison-stats">
+            <div class="comparison-stat-card">
+              <div class="stat-header">
+                <h4>Total Contributions</h4>
+                <div class="change-indicator" id="totalContributionsChange">
+                  -
+                </div>
+              </div>
+              <div class="stat-values">
+                <div class="current-value">
+                  <span class="label">Current:</span>
+                  <span class="value" id="currentTotalContributions">-</span>
+                </div>
+                <div class="previous-value">
+                  <span class="label">Previous:</span>
+                  <span class="value" id="previousTotalContributions">-</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="comparison-stat-card">
+              <div class="stat-header">
+                <h4>Active Days</h4>
+                <div class="change-indicator" id="activeDaysChange">-</div>
+              </div>
+              <div class="stat-values">
+                <div class="current-value">
+                  <span class="label">Current:</span>
+                  <span class="value" id="currentActiveDays">-</span>
+                </div>
+                <div class="previous-value">
+                  <span class="label">Previous:</span>
+                  <span class="value" id="previousActiveDays">-</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="comparison-stat-card">
+              <div class="stat-header">
+                <h4>Commits</h4>
+                <div class="change-indicator" id="commitsChange">-</div>
+              </div>
+              <div class="stat-values">
+                <div class="current-value">
+                  <span class="label">Current:</span>
+                  <span class="value" id="currentCommits">-</span>
+                </div>
+                <div class="previous-value">
+                  <span class="label">Previous:</span>
+                  <span class="value" id="previousCommits">-</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="comparison-stat-card">
+              <div class="stat-header">
+                <h4>Pull Requests</h4>
+                <div class="change-indicator" id="prsChange">-</div>
+              </div>
+              <div class="stat-values">
+                <div class="current-value">
+                  <span class="label">Current:</span>
+                  <span class="value" id="currentPRs">-</span>
+                </div>
+                <div class="previous-value">
+                  <span class="label">Previous:</span>
+                  <span class="value" id="previousPRs">-</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Comparison Charts -->
+          <div class="comparison-charts">
+            <!-- Side-by-side Contribution Chart -->
+            <div class="comparison-chart-container">
+              <div class="chart-header">
+                <h3>Daily Contributions Comparison</h3>
+                <div class="chart-period" id="comparisonChartPeriod"></div>
+              </div>
+              <div class="chart-wrapper">
+                <canvas id="comparisonChart"></canvas>
+              </div>
+            </div>
+
+            <!-- Weekly Pattern Comparison -->
+            <div class="comparison-chart-container">
+              <div class="chart-header">
+                <h3>Weekly Pattern Comparison</h3>
+                <p>Compare your weekly activity patterns</p>
+              </div>
+              <div class="chart-wrapper">
+                <canvas id="weeklyPatternComparisonChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
       </main>
     </div>
 

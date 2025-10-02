@@ -22,7 +22,7 @@ const axios = require("axios");
 const cors = require("cors");
 
 const app = express();
-const PORT = process.env.PORT || 4000;
+const PORT = 4000;
 
 // Middleware
 app.use(cors());
@@ -58,6 +58,33 @@ function getDateRange(period) {
   };
 }
 
+// Helper function to get both current and previous period date ranges
+function getComparisonDateRanges(period) {
+  const now = new Date();
+  const periodDays = {
+    "1week": 7,
+    "1month": 30,
+    "90day": 90,
+    "6month": 180,
+    "1year": 365,
+  };
+
+  const days = periodDays[period] || 30;
+
+  // Current period
+  const currentTo = now;
+  const currentFrom = new Date(now - days * 24 * 60 * 60 * 1000);
+
+  // Previous period (same duration, but shifted back)
+  const previousTo = new Date(currentFrom);
+  const previousFrom = new Date(currentFrom - days * 24 * 60 * 60 * 1000);
+
+  return {
+    current: { from: currentFrom, to: currentTo },
+    previous: { from: previousFrom, to: previousTo },
+  };
+}
+
 // Format date for GitHub API
 function formatDate(date) {
   return date.toISOString().split("T")[0];
@@ -84,6 +111,193 @@ const CONTRIBUTIONS_QUERY = `
     }
   }
 `;
+
+// API endpoint to get comparison data (current vs previous period) - MUST BE BEFORE general route
+app.get("/api/contributions/compare/:period", async (req, res) => {
+  console.log(
+    `📊 Comparison request received for period: ${req.params.period}`
+  );
+  try {
+    const { period } = req.params;
+    const dateRanges = getComparisonDateRanges(period);
+
+    // Fetch current period data
+    const currentResponse = await axios.post(
+      "https://api.github.com/graphql",
+      {
+        query: CONTRIBUTIONS_QUERY,
+        variables: {
+          username: GITHUB_USERNAME,
+          from: dateRanges.current.from.toISOString(),
+          to: dateRanges.current.to.toISOString(),
+        },
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${GITHUB_TOKEN}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    // Fetch previous period data
+    const previousResponse = await axios.post(
+      "https://api.github.com/graphql",
+      {
+        query: CONTRIBUTIONS_QUERY,
+        variables: {
+          username: GITHUB_USERNAME,
+          from: dateRanges.previous.from.toISOString(),
+          to: dateRanges.previous.to.toISOString(),
+        },
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${GITHUB_TOKEN}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    if (currentResponse.data.errors || previousResponse.data.errors) {
+      const errors = [
+        ...(currentResponse.data.errors || []),
+        ...(previousResponse.data.errors || []),
+      ];
+      console.error("GitHub API errors:", errors);
+      return res
+        .status(400)
+        .json({ error: "GitHub API error", details: errors });
+    }
+
+    // Process current period data
+    const currentData = currentResponse.data.data.user.contributionsCollection;
+    const currentContributions = [];
+    currentData.contributionCalendar.weeks.forEach((week) => {
+      week.contributionDays.forEach((day) => {
+        currentContributions.push({
+          date: day.date,
+          count: day.contributionCount,
+        });
+      });
+    });
+    currentContributions.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    // Process previous period data
+    const previousData =
+      previousResponse.data.data.user.contributionsCollection;
+    const previousContributions = [];
+    previousData.contributionCalendar.weeks.forEach((week) => {
+      week.contributionDays.forEach((day) => {
+        previousContributions.push({
+          date: day.date,
+          count: day.contributionCount,
+        });
+      });
+    });
+    previousContributions.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    // Calculate summaries and analytics for both periods
+    const currentSummary = {
+      totalCommits: currentData.totalCommitContributions,
+      totalIssues: currentData.totalIssueContributions,
+      totalPRs: currentData.totalPullRequestContributions,
+      totalReviews: currentData.totalPullRequestReviewContributions,
+      totalDays: currentContributions.length,
+      activeDays: currentContributions.filter((day) => day.count > 0).length,
+      totalContributions: currentContributions.reduce(
+        (sum, day) => sum + day.count,
+        0
+      ),
+    };
+
+    const previousSummary = {
+      totalCommits: previousData.totalCommitContributions,
+      totalIssues: previousData.totalIssueContributions,
+      totalPRs: previousData.totalPullRequestContributions,
+      totalReviews: previousData.totalPullRequestReviewContributions,
+      totalDays: previousContributions.length,
+      activeDays: previousContributions.filter((day) => day.count > 0).length,
+      totalContributions: previousContributions.reduce(
+        (sum, day) => sum + day.count,
+        0
+      ),
+    };
+
+    // Calculate percentage changes
+    const calculateChange = (current, previous) => {
+      if (previous === 0) return current > 0 ? 100 : 0;
+      return ((current - previous) / previous) * 100;
+    };
+
+    const changes = {
+      totalCommits: calculateChange(
+        currentSummary.totalCommits,
+        previousSummary.totalCommits
+      ),
+      totalIssues: calculateChange(
+        currentSummary.totalIssues,
+        previousSummary.totalIssues
+      ),
+      totalPRs: calculateChange(
+        currentSummary.totalPRs,
+        previousSummary.totalPRs
+      ),
+      totalReviews: calculateChange(
+        currentSummary.totalReviews,
+        previousSummary.totalReviews
+      ),
+      activeDays: calculateChange(
+        currentSummary.activeDays,
+        previousSummary.activeDays
+      ),
+      totalContributions: calculateChange(
+        currentSummary.totalContributions,
+        previousSummary.totalContributions
+      ),
+    };
+
+    const responseData = {
+      period,
+      dateRanges: {
+        current: {
+          from: formatDate(dateRanges.current.from),
+          to: formatDate(dateRanges.current.to),
+        },
+        previous: {
+          from: formatDate(dateRanges.previous.from),
+          to: formatDate(dateRanges.previous.to),
+        },
+      },
+      current: {
+        summary: currentSummary,
+        contributions: currentContributions,
+        analytics: calculateAnalytics(currentContributions),
+      },
+      previous: {
+        summary: previousSummary,
+        contributions: previousContributions,
+        analytics: calculateAnalytics(previousContributions),
+      },
+      changes: changes,
+    };
+
+    res.json(responseData);
+  } catch (error) {
+    console.error("Error fetching comparison data:", error.message);
+    if (error.response) {
+      console.error(
+        "GitHub API response:",
+        error.response.status,
+        error.response.data
+      );
+    }
+    res.status(500).json({
+      error: "Failed to fetch comparison data",
+      message: error.message,
+    });
+  }
+});
 
 // API endpoint to get GitHub contributions
 app.get("/api/contributions/:period", async (req, res) => {
