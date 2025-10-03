@@ -4,6 +4,7 @@ class GitGraph {
     this.rollingChart = null;
     this.comparisonChart = null;
     this.weeklyPatternComparisonChart = null;
+    this.streakFrequencyComparisonChart = null;
     this.currentTimeRange = "1month";
     this.currentRollingPeriod = "1month";
     this.contributionData = [];
@@ -851,6 +852,7 @@ class GitGraph {
       this.updateComparisonStats(data);
       this.updateComparisonChart(data);
       this.updateWeeklyPatternComparison(data);
+      this.updateStreakFrequencyComparison(data);
 
       console.log("Comparison data loaded successfully");
     } catch (error) {
@@ -1139,6 +1141,150 @@ class GitGraph {
         },
       },
     });
+  }
+
+  updateStreakFrequencyComparison(data) {
+    const ctx = document
+      .getElementById("streakFrequencyComparisonChart")
+      .getContext("2d");
+
+    if (this.streakFrequencyComparisonChart) {
+      this.streakFrequencyComparisonChart.destroy();
+    }
+
+    const currentStreakFreq = data.current.streakAnalysis.streakFrequency;
+    const previousStreakFreq = data.previous.streakAnalysis.streakFrequency;
+
+    // Only show frequencies for streaks that actually occurred (max 15 days for readability)
+    const maxStreakLength = Math.min(
+      15,
+      Math.max(
+        data.current.streakAnalysis.longestStreak,
+        data.previous.streakAnalysis.longestStreak
+      )
+    );
+
+    const labels = [];
+    const currentData = [];
+    const previousData = [];
+
+    for (let i = 1; i <= maxStreakLength; i++) {
+      labels.push(`${i} day${i > 1 ? "s" : ""}`);
+      currentData.push(currentStreakFreq[i] || 0);
+      previousData.push(previousStreakFreq[i] || 0);
+    }
+
+    // Add 31+ category if there are any long streaks
+    if (currentStreakFreq["31+"] > 0 || previousStreakFreq["31+"] > 0) {
+      labels.push("31+ days");
+      currentData.push(currentStreakFreq["31+"] || 0);
+      previousData.push(previousStreakFreq["31+"] || 0);
+    }
+
+    this.streakFrequencyComparisonChart = new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: "Current Period",
+            data: currentData,
+            backgroundColor: "rgba(78, 205, 196, 0.8)",
+            borderColor: "rgba(78, 205, 196, 1)",
+            borderWidth: 2,
+            borderRadius: 6,
+          },
+          {
+            label: "Previous Period",
+            data: previousData,
+            backgroundColor: "rgba(255, 193, 7, 0.6)",
+            borderColor: "rgba(255, 193, 7, 1)",
+            borderWidth: 2,
+            borderRadius: 6,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: true,
+            position: "top",
+            labels: {
+              color: "rgba(255, 255, 255, 0.8)",
+              padding: 20,
+            },
+          },
+          tooltip: {
+            backgroundColor: "rgba(0, 0, 0, 0.8)",
+            titleColor: "white",
+            bodyColor: "white",
+            callbacks: {
+              title: function (context) {
+                return `${context[0].label} streaks`;
+              },
+              label: function (context) {
+                const period =
+                  context.datasetIndex === 0 ? "Current" : "Previous";
+                const count = context.parsed.y;
+                return `${period}: ${count} streak${count !== 1 ? "s" : ""}`;
+              },
+            },
+          },
+        },
+        scales: {
+          x: {
+            grid: {
+              color: "rgba(255, 255, 255, 0.1)",
+              drawBorder: false,
+            },
+            ticks: {
+              color: "rgba(255, 255, 255, 0.7)",
+              maxRotation: 45,
+            },
+          },
+          y: {
+            beginAtZero: true,
+            grid: {
+              color: "rgba(255, 255, 255, 0.1)",
+              drawBorder: false,
+            },
+            ticks: {
+              color: "rgba(255, 255, 255, 0.7)",
+              stepSize: 1,
+            },
+            title: {
+              display: true,
+              text: "Number of Streaks",
+              color: "rgba(255, 255, 255, 0.8)",
+            },
+          },
+        },
+        interaction: {
+          intersect: false,
+          mode: "index",
+        },
+      },
+    });
+
+    // Update streak statistics
+    document.getElementById(
+      "currentLongestStreak"
+    ).textContent = `${data.current.streakAnalysis.longestStreak} days`;
+    document.getElementById(
+      "previousLongestStreak"
+    ).textContent = `${data.previous.streakAnalysis.longestStreak} days`;
+    document.getElementById(
+      "currentAvgStreak"
+    ).textContent = `${data.current.streakAnalysis.averageStreakLength.toFixed(
+      1
+    )} days`;
+    document.getElementById(
+      "previousAvgStreak"
+    ).textContent = `${data.previous.streakAnalysis.averageStreakLength.toFixed(
+      1
+    )} days`;
   }
 }
 

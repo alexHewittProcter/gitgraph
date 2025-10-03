@@ -90,6 +90,90 @@ function formatDate(date) {
   return date.toISOString().split("T")[0];
 }
 
+// Helper function to calculate all streaks in a period
+function calculateStreaks(contributions) {
+  if (!contributions.length)
+    return {
+      streaks: [],
+      streakFrequency: {},
+      longestStreak: 0,
+      totalStreaks: 0,
+    };
+
+  // Sort contributions by date
+  const sortedContributions = [...contributions].sort(
+    (a, b) => new Date(a.date) - new Date(b.date)
+  );
+
+  const streaks = [];
+  let currentStreak = 0;
+  let streakStart = null;
+
+  for (let i = 0; i < sortedContributions.length; i++) {
+    const contribution = sortedContributions[i];
+    const hasActivity = contribution.count > 0;
+
+    if (hasActivity) {
+      if (currentStreak === 0) {
+        streakStart = contribution.date;
+      }
+      currentStreak++;
+    } else {
+      if (currentStreak > 0) {
+        // End of a streak
+        streaks.push({
+          length: currentStreak,
+          startDate: streakStart,
+          endDate: sortedContributions[i - 1].date,
+        });
+        currentStreak = 0;
+        streakStart = null;
+      }
+    }
+  }
+
+  // Handle case where period ends with an active streak
+  if (currentStreak > 0) {
+    streaks.push({
+      length: currentStreak,
+      startDate: streakStart,
+      endDate: sortedContributions[sortedContributions.length - 1].date,
+    });
+  }
+
+  // Calculate streak frequency (how many streaks of each length)
+  const streakFrequency = {};
+  let longestStreak = 0;
+
+  // Initialize frequencies for lengths 1-30
+  for (let i = 1; i <= 30; i++) {
+    streakFrequency[i] = 0;
+  }
+  streakFrequency["31+"] = 0;
+
+  streaks.forEach((streak) => {
+    const length = streak.length;
+    longestStreak = Math.max(longestStreak, length);
+
+    if (length <= 30) {
+      streakFrequency[length]++;
+    } else {
+      streakFrequency["31+"]++;
+    }
+  });
+
+  return {
+    streaks,
+    streakFrequency,
+    longestStreak,
+    totalStreaks: streaks.length,
+    averageStreakLength:
+      streaks.length > 0
+        ? streaks.reduce((sum, s) => sum + s.length, 0) / streaks.length
+        : 0,
+  };
+}
+
 // GitHub GraphQL query for contribution data
 const CONTRIBUTIONS_QUERY = `
   query($username: String!, $from: DateTime!, $to: DateTime!) {
@@ -224,6 +308,10 @@ app.get("/api/contributions/compare/:period", async (req, res) => {
       ),
     };
 
+    // Calculate streak analysis for both periods
+    const currentStreakAnalysis = calculateStreaks(currentContributions);
+    const previousStreakAnalysis = calculateStreaks(previousContributions);
+
     // Calculate percentage changes
     const calculateChange = (current, previous) => {
       if (previous === 0) return current > 0 ? 100 : 0;
@@ -255,6 +343,18 @@ app.get("/api/contributions/compare/:period", async (req, res) => {
         currentSummary.totalContributions,
         previousSummary.totalContributions
       ),
+      longestStreak: calculateChange(
+        currentStreakAnalysis.longestStreak,
+        previousStreakAnalysis.longestStreak
+      ),
+      totalStreaks: calculateChange(
+        currentStreakAnalysis.totalStreaks,
+        previousStreakAnalysis.totalStreaks
+      ),
+      averageStreakLength: calculateChange(
+        currentStreakAnalysis.averageStreakLength,
+        previousStreakAnalysis.averageStreakLength
+      ),
     };
 
     const responseData = {
@@ -273,11 +373,13 @@ app.get("/api/contributions/compare/:period", async (req, res) => {
         summary: currentSummary,
         contributions: currentContributions,
         analytics: calculateAnalytics(currentContributions),
+        streakAnalysis: currentStreakAnalysis,
       },
       previous: {
         summary: previousSummary,
         contributions: previousContributions,
         analytics: calculateAnalytics(previousContributions),
+        streakAnalysis: previousStreakAnalysis,
       },
       changes: changes,
     };

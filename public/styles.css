@@ -717,6 +717,36 @@ body {
   height: 400px;
 }
 
+.streak-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 15px;
+  margin-top: 20px;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.streak-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.streak-stat .stat-label {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.85rem;
+  margin-bottom: 5px;
+}
+
+.streak-stat .stat-value {
+  color: #fff;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
 /* Responsive adjustments for comparison section */
 @media (max-width: 768px) {
   .comparison-stats {
@@ -740,5 +770,15 @@ body {
 
   .comparison-chart-container .chart-wrapper {
     height: 300px;
+  }
+
+  .streak-stats {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    padding: 15px;
+  }
+
+  .streak-stat .stat-value {
+    font-size: 1.1rem;
   }
 }
